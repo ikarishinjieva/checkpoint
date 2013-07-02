@@ -6,7 +6,7 @@
 
     <groupId>org.tac.nil.checkpoint</groupId>
     <artifactId>checkpoint</artifactId>
-    <version>1.0</version>
+    <version>1.0-SNAPSHOT</version>
 
     <dependencies>
         <dependency>
@@ -43,6 +43,12 @@
             <version>2.4</version>
         </dependency>
     </dependencies>
+    <distributionManagement>
+        <snapshotRepository>
+            <id>snapshots</id>
+            <url>http://10.186.18.11:8081/nexus/content/repositories/snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
     <build>
         <testResources>
             <testResource>
