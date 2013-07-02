@@ -12,10 +12,18 @@
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>zookeeper</artifactId>
+            <version>3.4.5-SNAPSHOT</version>
+        </dependency>
+        <!-- use following if you don't have zookeeper in maven repo -->
+        <!--
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>zookeeper</artifactId>
             <version>3.4.5</version>
             <scope>system</scope>
             <systemPath>${basedir}/libs/zookeeper-3.4.5.jar</systemPath>
         </dependency>
+        -->
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
