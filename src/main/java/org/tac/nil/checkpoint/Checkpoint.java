@@ -59,6 +59,11 @@ public class Checkpoint {
     slaveMutex.clear();
   }
 
+  public static void startServer(String ipAndPort) {
+    String[] split = ipAndPort.split(":");
+    startServer(split[0], Integer.valueOf(split[1]));
+  }
+
   public static void startServer(String ip, int port) {
     String dataDirectory = System.getProperty("java.io.tmpdir");
     File dir = new File(dataDirectory, "zookeeper").getAbsoluteFile();
