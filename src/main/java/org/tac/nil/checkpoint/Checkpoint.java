@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -129,9 +130,27 @@ public class Checkpoint {
   public static void add(String checkpointName, int expectedKickCount) {
     logger.debug(String.format("Add checkpoint : %s", checkpointName));
     checkInit();
+    String path = String.format("/checkpoint/%s", checkpointName);
+    if (hasPath(path)) {
+      deletePath(path);
+    }
     Checkpoint.masterMutex.put(checkpointName, new Integer(expectedKickCount));
     Checkpoint.slaveMutex.put(checkpointName, new Integer(1));
-    createPath(String.format("/checkpoint/%s", checkpointName));
+    createPath(path);
+  }
+
+  private static void deletePath(String path) {
+    try {
+      List<String> children = zooKeeper.getChildren(path, false);
+      for (String child : children) {
+        zooKeeper.delete(String.format("%s/%s", path, child), -1);
+      }
+      zooKeeper.delete(path, -1);
+    } catch (KeeperException e) {
+      Throwables.propagate(e);
+    } catch (InterruptedException e) {
+      Throwables.propagate(e);
+    }
   }
 
   public static void add(String checkpointName) {

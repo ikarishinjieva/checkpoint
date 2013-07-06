@@ -123,4 +123,22 @@ public class CheckpointTest {
     Thread.sleep(1000);
     Assert.assertTrue(ifCheckpointPass.get());
   }
+
+  @Test
+  public void addAndKickAndHoldCheckpointShouldBeRepeatable() throws Exception {
+    Checkpoint.add("checkpoint");
+    new Thread(new Runnable() {
+      @Override
+      public void run() {
+        Checkpoint.kick("checkpoint");
+      }
+    }).start();
+    Checkpoint.hold("checkpoint");
+    try {
+      Checkpoint.add("checkpoint");
+    } catch (Exception e) {
+      e.printStackTrace();
+      Assert.fail();
+    }
+  }
 }
