@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -58,7 +59,7 @@ public class Checkpoint {
     slaveMutex.clear();
   }
 
-  public static void startServer(int port) {
+  public static void startServer(String ip, int port) {
     String dataDirectory = System.getProperty("java.io.tmpdir");
     File dir = new File(dataDirectory, "zookeeper").getAbsoluteFile();
     try {
@@ -68,7 +69,7 @@ public class Checkpoint {
     }
     try {
       ZooKeeperServer server = new ZooKeeperServer(dir, dir, 2000);
-      serverFactory = NIOServerCnxnFactory.createFactory(port, 1000);
+      serverFactory = NIOServerCnxnFactory.createFactory(new InetSocketAddress(ip, port), 1000);
       serverFactory.startup(server);
     } catch (IOException e) {
       Throwables.propagate(e);

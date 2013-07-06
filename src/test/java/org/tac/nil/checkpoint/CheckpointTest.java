@@ -14,9 +14,13 @@ public class CheckpointTest {
 
   @Before
   public void setUp() throws Exception {
-    Checkpoint.startServer(3333);
+    Checkpoint.startServer(getLocalIp(), 3333);
     Thread.sleep(2000);
     Checkpoint.init(getServerIpAndPort());
+  }
+
+  private String getLocalIp() throws UnknownHostException {
+    return InetAddress.getLocalHost().getCanonicalHostName();
   }
 
   @After
@@ -47,7 +51,7 @@ public class CheckpointTest {
   }
 
   private String getServerIpAndPort() throws UnknownHostException {
-    return String.format("%s:3333", InetAddress.getLocalHost().getCanonicalHostName());
+    return String.format("%s:3333", getLocalIp());
   }
 
   @Test
