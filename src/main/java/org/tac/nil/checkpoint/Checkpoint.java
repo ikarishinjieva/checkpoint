@@ -157,6 +157,15 @@ public class Checkpoint {
     add(checkpointName, 1);
   }
 
+  public static void delete(String checkpointName) {
+    logger.debug(String.format("Delete checkpoint : %s", checkpointName));
+    checkInit();
+    String path = String.format("/checkpoint/%s", checkpointName);
+    deletePath(path);
+    Checkpoint.masterMutex.remove(checkpointName);
+    Checkpoint.slaveMutex.remove(checkpointName);
+  }
+
   public static void kick(String checkpointName) {
     logger.debug(String.format("Kick checkpoint : %s", checkpointName));
     if (null == zooKeeper) {
@@ -210,6 +219,35 @@ public class Checkpoint {
             mutex.wait();
           } catch (InterruptedException e) {
             Throwables.propagate(e);
+          }
+        } else {
+          break;
+        }
+      }
+    }
+  }
+
+
+  public static void holdAndCont(String checkpointName) {
+    hold(checkpointName);
+    cont(checkpointName);
+  }
+
+
+  public static void holdUntilTimeout(String checkpointName, long timeoutSeconds) throws InterruptedException {
+    logger.debug(String.format("Hold checkpoint : %s", checkpointName));
+    checkInit();
+    assert masterMutex.containsKey(checkpointName);
+    Integer mutex = masterMutex.get(checkpointName);
+    while (true) {
+      synchronized (mutex) {
+        int childrenSize = getPathChildrenSize(String.format("/checkpoint/%s", checkpointName));
+        if (childrenSize < mutex) {
+          try {
+            logger.debug(String.format("Waiting master mutex : %s", checkpointName));
+            mutex.wait(timeoutSeconds * 1000);
+          } catch (InterruptedException e) {
+            throw e;
           }
         } else {
           break;
