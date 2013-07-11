@@ -84,6 +84,12 @@ public class Checkpoint {
     }
   }
 
+  private static int globalTimeout = 300 * 1000;
+
+  public static void setGlobalTimeout(int seconds) {
+    globalTimeout = Math.max(0, seconds) * 1000;
+  }
+
   public static synchronized void init(String address) {
     logger.debug(String.format("init checkpoint address = %s", address));
     try {
@@ -182,7 +188,7 @@ public class Checkpoint {
     synchronized (mutex) {
       try {
         logger.debug(String.format("Waiting slave mutex : %s", checkpointName));
-        mutex.wait();
+        mutex.wait(globalTimeout);
       } catch (InterruptedException e) {
         Throwables.propagate(e);
       }
@@ -216,7 +222,7 @@ public class Checkpoint {
         if (childrenSize < mutex) {
           try {
             logger.debug(String.format("Waiting master mutex : %s", checkpointName));
-            mutex.wait();
+            mutex.wait(globalTimeout);
           } catch (InterruptedException e) {
             Throwables.propagate(e);
           }
