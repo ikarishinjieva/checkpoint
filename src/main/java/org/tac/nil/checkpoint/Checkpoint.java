@@ -22,23 +22,35 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Checkpoint {
   public static final int SESSION_TIMEOUT = 60000;
   private static Map<String, Integer> masterMutex = new ConcurrentHashMap<String, Integer>();
-  private static Map<String, Integer> slaveMutex = new ConcurrentHashMap<String, Integer>();
+  private static ConcurrentHashMap<String, Integer> slaveMutex = new ConcurrentHashMap<String, Integer>();
   private static ZooKeeper zooKeeper = null;
   private static Logger logger = LoggerFactory.getLogger(Checkpoint.class);
   private static Watcher watcher = new Watcher() {
     @Override
     public void process(WatchedEvent watchedEvent) {
-      if (!Event.EventType.NodeChildrenChanged.equals(watchedEvent.getType())) {
+      if (Event.EventType.NodeChildrenChanged.equals(watchedEvent.getType())) {
+        String path = watchedEvent.getPath();
+        logger.debug(String.format("Process ZooKeeper watcher event NodeChildrenChanged: %s", path));
+        String checkpointName = getCheckpointNameFromPath(watchedEvent.getPath());
+        Integer mutex = masterMutex.get(checkpointName);
+        assert null != mutex;
+        logger.debug(String.format("Notify master mutex : %s", checkpointName));
+        synchronized (mutex) {
+          mutex.notifyAll();
+        }
         return;
-      }
-      String path = watchedEvent.getPath();
-      logger.debug(String.format("Process ZooKeeper watcher event : %s", path));
-      String checkpointName = getCheckpointNameFromPath(watchedEvent.getPath());
-      Integer mutex = masterMutex.get(checkpointName);
-      assert null != mutex;
-      logger.debug(String.format("Notify master mutex : %s", checkpointName));
-      synchronized (mutex) {
-        mutex.notifyAll();
+      } else if (Event.EventType.NodeDeleted.equals(watchedEvent.getType())) {
+        String path = watchedEvent.getPath();
+        logger.debug(String.format("Process ZooKeeper watcher event NodeDeleted: %s", path));
+        String checkpointName = getCheckpointNameFromPath(watchedEvent.getPath());
+        Integer mutex = slaveMutex.get(checkpointName);
+        if (null != mutex) {
+          synchronized (mutex) {
+            mutex.notifyAll();
+          }
+        }
+        slaveMutex.remove(checkpointName);
+        return;
       }
     }
 
@@ -101,14 +113,14 @@ public class Checkpoint {
   }
 
   private static void createRootPathIfNeed() {
-    if (!hasPath("/checkpoint")) {
+    if (!hasPath("/checkpoint", false)) {
       createPath("/checkpoint");
     }
   }
 
-  private static boolean hasPath(String path) {
+  private static boolean hasPath(String path, boolean watch) {
     try {
-      return null != zooKeeper.exists(path, false);
+      return null != zooKeeper.exists(path, watch);
     } catch (KeeperException e) {
       Throwables.propagate(e);
     } catch (InterruptedException e) {
@@ -137,11 +149,10 @@ public class Checkpoint {
     logger.debug(String.format("Add checkpoint : %s", checkpointName));
     checkInit();
     String path = String.format("/checkpoint/%s", checkpointName);
-    if (hasPath(path)) {
+    if (hasPath(path, true)) {
       deletePath(path);
     }
     Checkpoint.masterMutex.put(checkpointName, new Integer(expectedKickCount));
-    Checkpoint.slaveMutex.put(checkpointName, new Integer(1));
     createPath(path);
   }
 
@@ -179,11 +190,12 @@ public class Checkpoint {
       return;
     }
     checkInit();
-    if (!hasPath(String.format("/checkpoint/%s", checkpointName))) {
+    if (!hasPath(String.format("/checkpoint/%s", checkpointName), true)) {
       logger.debug(String.format("No checkpoint %s found, ignore kick", checkpointName));
       return;
     }
     createPath(String.format("/checkpoint/%s/%s", checkpointName, getCheckpointId()));
+    slaveMutex.putIfAbsent(checkpointName, new Integer(1));
     Integer mutex = slaveMutex.get(checkpointName);
     synchronized (mutex) {
       try {
@@ -276,10 +288,7 @@ public class Checkpoint {
 
   public static void cont(String checkpointName) {
     logger.debug(String.format("Cont checkpoint %s", checkpointName));
-    Integer mutex = slaveMutex.get(checkpointName);
-    assert null != mutex;
-    synchronized (mutex) {
-      mutex.notifyAll();
-    }
+    String path = String.format("/checkpoint/%s", checkpointName);
+    deletePath(path);
   }
 }

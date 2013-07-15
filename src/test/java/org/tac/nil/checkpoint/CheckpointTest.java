@@ -14,7 +14,7 @@ public class CheckpointTest {
 
   @Before
   public void setUp() throws Exception {
-    Checkpoint.startServer(getLocalIp(), 3333);
+    Checkpoint.startServer(getServerIpAndPort());
     Thread.sleep(2000);
     Checkpoint.init(getServerIpAndPort());
   }
@@ -93,7 +93,6 @@ public class CheckpointTest {
     Thread thread = new Thread() {
       @Override
       public void run() {
-
         Checkpoint.kick("first_checkpoint");
         isFirstCheckpointPass.set(true);
         Checkpoint.kick("second_checkpoint");
