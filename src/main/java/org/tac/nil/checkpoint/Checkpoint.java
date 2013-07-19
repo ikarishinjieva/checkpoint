@@ -189,21 +189,25 @@ public class Checkpoint {
       logger.debug("No zookeeper found, ignore kick");
       return;
     }
-    checkInit();
-    if (!hasPath(String.format("/checkpoint/%s", checkpointName), true)) {
-      logger.debug(String.format("No checkpoint %s found, ignore kick", checkpointName));
-      return;
-    }
-    createPath(String.format("/checkpoint/%s/%s", checkpointName, getCheckpointId()));
-    slaveMutex.putIfAbsent(checkpointName, new Integer(1));
-    Integer mutex = slaveMutex.get(checkpointName);
-    synchronized (mutex) {
-      try {
-        logger.debug(String.format("Waiting slave mutex : %s", checkpointName));
-        mutex.wait(globalTimeout);
-      } catch (InterruptedException e) {
-        Throwables.propagate(e);
+    try {
+      checkInit();
+      if (!hasPath(String.format("/checkpoint/%s", checkpointName), true)) {
+        logger.debug(String.format("No checkpoint %s found, ignore kick", checkpointName));
+        return;
       }
+      createPath(String.format("/checkpoint/%s/%s", checkpointName, getCheckpointId()));
+      slaveMutex.putIfAbsent(checkpointName, new Integer(1));
+      Integer mutex = slaveMutex.get(checkpointName);
+      synchronized (mutex) {
+        try {
+          logger.debug(String.format("Waiting slave mutex : %s", checkpointName));
+          mutex.wait(globalTimeout);
+        } catch (InterruptedException e) {
+          Throwables.propagate(e);
+        }
+      }
+    } catch (Throwable throwable) {
+      logger.error(Throwables.getStackTraceAsString(throwable));
     }
   }
 
