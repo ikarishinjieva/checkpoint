@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Checkpoint {
-  public static final int SESSION_TIMEOUT = 60000;
+  public static final int SESSION_TIMEOUT = 3600 * 1000;
   private static Map<String, Integer> masterMutex = new ConcurrentHashMap<String, Integer>();
   private static ConcurrentHashMap<String, Integer> slaveMutex = new ConcurrentHashMap<String, Integer>();
   private static ZooKeeper zooKeeper = null;
