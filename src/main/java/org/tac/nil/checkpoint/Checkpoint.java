@@ -119,14 +119,23 @@ public class Checkpoint {
   }
 
   private static boolean hasPath(String path, boolean watch) {
-    try {
-      return null != zooKeeper.exists(path, watch);
-    } catch (KeeperException e) {
-      Throwables.propagate(e);
-    } catch (InterruptedException e) {
-      Throwables.propagate(e);
+    int retry = 5;
+    while (true) {
+      try {
+        return null != zooKeeper.exists(path, watch);
+      } catch (KeeperException e) {
+        if (retry-- == 0) {
+          Throwables.propagate(e);
+        }
+        try {
+          Thread.sleep(2000);
+        } catch (InterruptedException e1) {
+          //ignore
+        }
+      } catch (InterruptedException e) {
+        Throwables.propagate(e);
+      }
     }
-    return false;
   }
 
   private static void createPath(String path) {
