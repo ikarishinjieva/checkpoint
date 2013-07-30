@@ -2,6 +2,7 @@ package org.tac.nil.checkpoint;
 
 import com.google.common.base.Throwables;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.time.DateUtils;
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.server.NIOServerCnxnFactory;
 import org.apache.zookeeper.server.ServerCnxnFactory;
@@ -14,6 +15,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -241,18 +243,21 @@ public class Checkpoint {
     checkInit();
     assert masterMutex.containsKey(checkpointName);
     Integer mutex = masterMutex.get(checkpointName);
+    Date startTime = new Date();
     while (true) {
       synchronized (mutex) {
         int childrenSize = getPathChildrenSize(String.format("/checkpoint/%s", checkpointName));
-        if (childrenSize < mutex) {
-          try {
-            logger.debug(String.format("Waiting master mutex : %s", checkpointName));
-            mutex.wait(globalTimeout);
-          } catch (InterruptedException e) {
-            Throwables.propagate(e);
-          }
-        } else {
+        if (childrenSize >= mutex) {
           break;
+        }
+        if (DateUtils.addSeconds(startTime, globalTimeout).before(new Date())) {
+          break;
+        }
+        try {
+          logger.debug(String.format("Waiting master mutex : %s", checkpointName));
+          mutex.wait(5000);
+        } catch (InterruptedException e) {
+          Throwables.propagate(e);
         }
       }
     }
@@ -262,29 +267,6 @@ public class Checkpoint {
   public static void holdAndCont(String checkpointName) {
     hold(checkpointName);
     cont(checkpointName);
-  }
-
-
-  public static void holdUntilTimeout(String checkpointName, long timeoutSeconds) throws InterruptedException {
-    logger.debug(String.format("Hold checkpoint : %s", checkpointName));
-    checkInit();
-    assert masterMutex.containsKey(checkpointName);
-    Integer mutex = masterMutex.get(checkpointName);
-    while (true) {
-      synchronized (mutex) {
-        int childrenSize = getPathChildrenSize(String.format("/checkpoint/%s", checkpointName));
-        if (childrenSize < mutex) {
-          try {
-            logger.debug(String.format("Waiting master mutex : %s", checkpointName));
-            mutex.wait(timeoutSeconds * 1000);
-          } catch (InterruptedException e) {
-            throw e;
-          }
-        } else {
-          break;
-        }
-      }
-    }
   }
 
   private static int getPathChildrenSize(String path) {
