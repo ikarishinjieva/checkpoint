@@ -241,14 +241,18 @@ public class Checkpoint {
     checkInit();
     assert masterMutex.containsKey(checkpointName);
     Integer mutex = masterMutex.get(checkpointName);
-    synchronized (mutex) {
-      int childrenSize = getPathChildrenSize(String.format("/checkpoint/%s", checkpointName));
-      if (childrenSize < mutex) {
-        try {
-          logger.debug(String.format("Waiting master mutex : %s", checkpointName));
-          mutex.wait(globalTimeout);
-        } catch (InterruptedException e) {
-          Throwables.propagate(e);
+    while (true) {
+      synchronized (mutex) {
+        int childrenSize = getPathChildrenSize(String.format("/checkpoint/%s", checkpointName));
+        if (childrenSize < mutex) {
+          try {
+            logger.debug(String.format("Waiting master mutex : %s", checkpointName));
+            mutex.wait(globalTimeout);
+          } catch (InterruptedException e) {
+            Throwables.propagate(e);
+          }
+        } else {
+          break;
         }
       }
     }
