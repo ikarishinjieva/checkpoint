@@ -140,4 +140,17 @@ public class CheckpointTest {
       Assert.fail();
     }
   }
+
+  @Test
+  public void holdShouldThrowExceptionIfGlobalTimeout() throws Exception {
+    Checkpoint.add("checkpoint");
+    Checkpoint.setGlobalTimeout(5);
+    try {
+      Checkpoint.hold("checkpoint");
+    } catch (Throwable e) {
+      Assert.assertTrue(e instanceof CheckpointHoldTimeout);
+      return;
+    }
+    Assert.fail();
+  }
 }

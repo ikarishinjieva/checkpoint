@@ -98,10 +98,10 @@ public class Checkpoint {
     }
   }
 
-  private static int globalTimeout = 300 * 1000;
+  private static int globalTimeout = 300;
 
   public static void setGlobalTimeout(int seconds) {
-    globalTimeout = Math.max(0, seconds) * 1000;
+    globalTimeout = Math.max(0, seconds);
   }
 
   public static synchronized void init(String address) {
@@ -251,7 +251,7 @@ public class Checkpoint {
           break;
         }
         if (DateUtils.addSeconds(startTime, globalTimeout).before(new Date())) {
-          break;
+          throw new CheckpointHoldTimeout();
         }
         try {
           logger.debug(String.format("Waiting master mutex : %s", checkpointName));
